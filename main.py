@@ -49,18 +49,37 @@ def save_playlist_to_text(songs, artists, txt_save_path, txt_song_artist_separat
 
 
 def authenticate_spotify(client_id, client_secret, redirect_url, username):
-    scope = 'playlist-modify-public'
-    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
-                                                   client_secret=client_secret,
-                                                   redirect_uri=redirect_url,
-                                                   scope=scope,
-                                                   username=username))
+
+    scope = (
+        "playlist-modify-public "
+        "playlist-modify-private "
+        "playlist-read-private "
+        "playlist-read-collaborative "
+        "user-read-private"
+    )
+
+    print("USING SCOPE:")
+    print(scope)
+
+    sp = spotipy.Spotify(
+        auth_manager=SpotifyOAuth(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=redirect_url,
+            scope=scope,
+            open_browser=True
+        )
+    )
+
     return sp
 
 
-def create_spotify_playlist(sp, username, spotify_playlist_name):
-    playlist = sp.user_playlist_create(user=username, name=spotify_playlist_name, public=True,
-                                       description="Imported from Anghami")
+def create_spotify_playlist(sp, spotify_playlist_name):
+    playlist = sp.current_user_playlist_create(
+        name=spotify_playlist_name,
+        public=True,
+        description="Imported from Anghami"
+    )
     return playlist['id']
 
 
@@ -108,8 +127,20 @@ def main():
 
     # Authenticate and create a new playlist on Spotify
     sp = authenticate_spotify(client_id, client_secret, redirect_url, username)
-    playlist_id = create_spotify_playlist(sp, username, spotify_playlist_name)
 
+    print("\n=== CURRENT USER ===")
+    user = sp.current_user()
+
+    print("ID:", user["id"])
+    print("Display Name:", user.get("display_name"))
+    print("Product:", user.get("product"))
+
+    print("\n=== PLAYLIST ACCESS TEST ===")
+    print(sp.current_user_playlists(limit=1))
+    playlist_id = create_spotify_playlist(
+        sp,
+        spotify_playlist_name
+    )
     # Search and add tracks to the Spotify playlist
     logger.info("Importing playlist to Spotify...")
     not_found = search_and_add_tracks(sp, playlist_id, songs, artists, username)
